@@ -1,19 +1,89 @@
-import numpy as np
 import math
-from mpl_toolkits.mplot3d import Axes3D
-import matplotlib.pyplot as plt
-import random
+
+import numpy as np
+
+
+# Returns a list of (x,y,z) tuples
+def ParseVertices(fileName):
+    xyz = []
+    file = open(fileName, 'r')
+    for line in file:
+        lineContents = line.split();
+        if lineContents[0] == 'v':
+            xyz.append((float(lineContents[1]), float(lineContents[3]), float(lineContents[2])))
+    return (xyz)
+
+
+# Returns the 2D Cartesian Coordinates (x,y) in Polar Coordinates (rho,phi) in degrees
+def CartToPol_Point(x, y):
+    rho = np.sqrt(x ** 2 + y ** 2)
+    phi = np.arctan2(y, x) * 180.0 / math.pi
+
+    # Processing The Numericals
+    if phi < 0:
+        phi = 360 + phi
+    rho = int(rho * 1000) / 1000
+    phi = round(phi)
+
+    return (rho, phi)
+
+
+# Returns the 3D Cartesian Coordinates (x,y,z) in Cylindrical Coordinates (rho,phi,z) in degrees
+def CartToCyl_Point(x, y, z):
+    rho, phi = CartToPol_Point(x, y)
+    return (rho, phi, z)
+
+
+def CartToCyl(xyz_Cart):
+    xyz_Cyl = []
+    for x, y, z in xyz_Cart:
+        xyz_Cyl.append(CartToCyl_Point((x, y, z)))
+    return xyz_Cyl
+
+
+def ZLayering(xyz_Cyl):
+    xyz_Cyl = sorted(xyz_Cyl, key=lambda x: x[2])  # Sort With Respect to Z coordinates
+    ZSet = set()
+    ZList = []
+    temp = []
+    for rho, phi, z in xyz_Cyl:
+        if z not in ZSet:
+            ZList.append(temp)
+            temp = [(rho, phi)]
+            ZSet.add(z)
+        else:
+            temp.append((rho, phi))
+    ZList.append(temp)
+    ZList.remove([])
+    ZListSorted = []
+    for a in ZList:
+        ZListSorted.append(sorted(a, key=lambda x: x[1]))  # Sort Each Z layer With Respect To Phi
+
+    return ZListSorted
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 x = []
 y = []
 Z = []
+XYZ = []
+print(ParseVertices('Cube.obj'))
 
-def cart2pol(x, y):
-    rho = np.sqrt(x**2 + y**2)
-    phi = np.arctan2(y, x) * 180.0 / math.pi
-    if phi < 0:
-        phi = 360 + phi
-    return(rho, phi)
 
 XYZ = []
 file = open('TestModel2.obj','r')
@@ -44,23 +114,25 @@ ZSet = set()
 ZList = []
 temp = []
 for xx,yy,zz in XYZ:
-    xxx, yyy = cart2pol(xx,yy)
+    xxx, yyy = CartToPol_Point(xx, yy)
+    xxx = int(xxx * 1000)/1000
     if zz not in ZSet:
         ZList.append(temp)
         temp = [(xxx,yyy)]
         ZSet.add(zz)
     else:
-        temp.append((xxx,yyy))
+        temp.append((xxx, round(yyy)))
 ZList.append(temp)
 ZList.remove([])
 ZListSorted = []
 for a in ZList:
-    ZListSorted.append(sorted(a,key= lambda  x : x[1]))
-
+    ZListSorted.append(sorted(a, key= lambda  x : x[1]))
+    print(sorted(a, key=lambda x: x[1]))
+#print(ZListSorted)
 PhiSamplingRate = 60
 PhiSamples = list(range(0,360,PhiSamplingRate))
 NormalizedPhiSamples = []
-for layer in ZList:
+for layer in ZListSorted:
     LayerNormValues = []
     Initial = layer[0][0]
     Final = layer[len(layer)-1][0]
